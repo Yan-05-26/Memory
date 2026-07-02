@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Color Memory</title>
+    <style>
+
+        *
+        {
+            font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+            font-size: 50px;
+            text-align: center;
+            color: white;
+            text-shadow: 0 0 25px white;
+        }
+
+        body
+        {
+            background-color: rgb(0, 0, 0);
+        }
+
+        td 
+        {
+            border: 1px solid black;
+            width: 200px;
+            height: 200px;
+            z-index: 0;
+        }
+
+        td img 
+        {
+            width: 95%;
+            height: 95%;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            z-index: 10;
+        }
+
+        tr 
+        {
+            border: 1px solid black;
+        }
+
+        table 
+        {
+            border: 1px solid black;
+            border-collapse: collapse;
+            margin: auto;
+        }
+
+        .hidden
+        {
+            background-color: #555;
+        }
+
+        .hidden:hover
+        {
+            background-color: #666;
+            box-shadow: 0 0 50px white;
+        }
+
+        table:hover td.hidden:not(:hover)
+        {
+            background-color: #222;
+        }
+
+    </style>
+</head>
+
+<body onload="buildGame();">
+    <!-- Insert the basic DOM Elements, that you want to use, h2-Header, table...-->
+    <h2>Memory</h2>
+    <h1 id="result"></h1>
+   
+    <main id="main">
+
+    </main>
+
+    <!-- Write JavaScript Code to manipulate the DOM-->
+    <script>
+        let colorarray = [];
+        let gifarray = [];
+        let tmp_card = null;
+        let e = null;
+        let fields;
+        let uncovered_cards = 0;
+
+        function buildGame() {
+            // playfield size
+            var sx = 4;
+            var sy = 2;
+            var img_count = sx * sy / 2;
+            cols = generateHslaColors(75, 50, 1.0, img_count);
+            getGifs(img_count);
+            let table = document.createElement("table");
+            let tr;
+            let td;
+            let img;
+            fields = sx * sy;
+
+            for(let i = 0; i < cols.length; i++)
+            {
+                colorarray.push(cols[i]);
+                colorarray.push(cols[i]);
+            }
+
+            let x = 0;
+            for(let i = 0; i < sy; i++)
+            {
+                tr = table.appendChild(document.createElement("tr"));
+                for(let j = 0; j < sx; j++)
+                {
+                    td = document.createElement("td");
+                    td.setAttribute("class", "hidden");
+                    td.setAttribute("id", x);
+                    td.setAttribute("onclick", "checkCard(this)");
+                    tr.appendChild(td);
+                    x++;
+                }
+            }
+            document.getElementById("main").appendChild(table);            
+        }
+
+        
+        function generateHslaColors(saturation, lightness, alpha, amount) {
+            var colors = [];
+            var huedelta = Math.trunc(360 / amount);
+
+            for (var i = 0; i < amount; i++) {
+                var hue =   i * huedelta;
+                colors.push("hsla(" + hue + ", "+ saturation  +"%," + lightness +"%," + alpha+")");
+            }
+
+            return colors;
+        }
+
+        function shuffleArrays(amount, num)
+        {
+            let tmpItem;
+            let rnd;
+
+            for(let j = 0; j < num; j++)
+            {
+                for(let i = 0; i < amount; i++)
+                {
+                    rnd = Math.floor(Math.random() * (amount * 2));
+
+                    tmpItem = colorarray[i];
+                    colorarray[i] = colorarray[rnd]; 
+                    colorarray[rnd] = tmpItem;
+
+                    tmpItem = gifarray[i];
+                    gifarray[i] = gifarray[rnd]; 
+                    gifarray[rnd] = tmpItem;
+                }
+            }
+        }
+
+        function checkCard(element)
+        {
+            e = element;
+            img = document.createElement("img");
+
+            e.setAttribute("style", "background-color:" + colorarray[e.id] + ";box-shadow: 0 0 5px " + colorarray[e.id]);
+            e.appendChild(img);
+            img.setAttribute("src", gifarray[e.id].images.original.url);
+            e.removeAttribute("onclick");
+            e.removeAttribute("class");
+            
+            if(tmp_card === null)
+            {
+                tmp_card = e;
+                tmp_card.removeAttribute("onclick");
+            }
+
+            else
+            {
+                if(colorarray[tmp_card.id] === colorarray[e.id])
+                {
+                    tmp_card.setAttribute("style", "background-color:" + colorarray[tmp_card.id] + ";box-shadow: 0 0 100px " + colorarray[tmp_card.id]);
+                    e.setAttribute("style", "background-color:" + colorarray[e.id] + ";box-shadow: 0 0 25px " + colorarray[e.id]);
+                    uncovered_cards += 2;
+                    tmp_card = null;
+                }
+
+                else
+                {
+                    document.body.addEventListener("mouseup", flipCards);
+                }
+            }
+
+            checkForWin();
+        }
+
+
+        function flipCards()
+        {
+            resetCard(tmp_card);
+            resetCard(e);
+
+            tmp_card = null;
+
+            document.body.removeEventListener("mouseup", flipCards);
+        }
+
+        function checkForWin()
+        {
+            if(uncovered_cards >= fields)
+            {
+                document.getElementById("result").textContent = "Solved";
+            }
+        }
+
+        function resetCard(card)
+        {
+            card.removeChild(card.childNodes[0]);
+            card.removeAttribute("style");
+            card.setAttribute("class", "hidden");
+            card.setAttribute("onclick", "checkCard(this)");
+        }
+
+        function getGifs(limit)
+        {
+            request = new XMLHttpRequest;
+            request.onreadystatechange = addGifsToArray;
+            request.open("GET", "https://api.giphy.com/v1/gifs/search?api_key=" + "lkNrIY31DZIPWpmT2sTBOnQV6J58nFOw" + "&q=spongebob&limit=" + limit);
+            request.send();
+        }
+
+        function addGifsToArray(){
+            if(request.readyState === XMLHttpRequest.DONE)
+            {
+                let gifs = JSON.parse(request.responseText).data;   
+
+                for(let i = 0; i < gifs.length; i++)
+                {
+                    gifarray.push(gifs[i]);
+                    gifarray.push(gifs[i]);
+                }
+
+                shuffleArrays(gifs.length, 10);
+            }
+        }
+        
+            // I used the following sources
+            // generate unique numbers
+            // https://javascript.plainenglish.io/how-to-generate-unique-random-numbers-between-1-and-100-with-javascript-ffa29c389833
+            // How to use Javascript Set explained
+            // https://www.w3schools.com/js/js_object_sets.asp
+            // How to take ONE element out of an array
+            // https://www.w3schools.com/jsref/jsref_splice.asp
+
+            // from https://mika-s.github.io/javascript/colors/hsl/2017/12/05/generating-random-colors-in-javascript.html
+
+            
+    </script>
+</body>
+
+</html>

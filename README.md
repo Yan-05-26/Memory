@@ -1,1 +1,1 @@
-yan-05-26.github.io/Memory/memory.html
+https://Yan-05-26.github.io/Memory/memory.html
